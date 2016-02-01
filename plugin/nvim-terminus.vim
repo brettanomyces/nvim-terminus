@@ -1,3 +1,4 @@
+" TODO reasoning for using bufname vs bufnr
 " {bufname, job_id}
 let g:terminus_terms = {}
 
@@ -6,6 +7,25 @@ function! s:start_terminal(cmd)
   enew
   let job_id = termopen(a:cmd)
   let g:terminus_terms[bufname('%')] = l:job_id
+endfunction
+
+" open a scratch buffer and return the bufname
+function! s:open_scratch_buffer(term_buf_name)
+  " open new empty buffer
+  new
+
+  " make buffer a scratch buffer
+  setlocal buftype=nofile
+  setlocal bufhidden=unload
+  setlocal noswapfile
+
+  " send command back to terminal when we leave this buffer. Note that we
+  " can't use arguments in autocmd as they won't exist when autocmd is run so
+  " we must use execute to resolve it
+  execute 'autocmd BufLeave <buffer> 
+        \ call jobsend(' . g:terminus_terms[a:term_buf_name] . ', join(getline(1, ''$''), "\n")) 
+        \ | autocmd! BufLeave <buffer>'
+
 endfunction
 
 function! s:clear_terminal(bufname)
@@ -49,14 +69,36 @@ function! s:strip_prompt(commandline, prompt)
   return strpart(a:commandline, l:prompt_idx)
 endfunction
 
-function! s:edit_command()
-  let bufname = bufname('%')
-  let command = s:extract_command(l:bufname, '>')
-  call jobsend(g:terminus_terms[l:bufname], '')
-  "s:clear_commandline(l:bufname)
+function! s:put_command(command)
+  " TODO investigate using append()
+  put! =a:command
+  " TODO format command before putting it in the buffer?
+  call s:format_command()
 endfunction
 
-tnoremap <silent> <Plug>EditCommand <c-\><c-n>:call <SID>edit_command()<cr>
+function! s:format_command()
+  " strip leading whitespace
+  %left
 
-tmap <c-x> <Plug>EditCommand
+  " a single line in terminal buffer that wraps is yanked as two lines
+  " so we must join to recombine it. However we do not want to join lines
+  " that end with a '\'.
+
+  " replace backslash followed by newline with \$ so we can see where to add newlines after join
+  silent! %substitute/\\$/\\\$
+  %join!
+  silent! %substitute/\\\$/\\\r/g
+endfunction
+
+function! s:edit_command()
+  let term_buf_name = bufname('%')
+  let command = s:extract_command(l:term_buf_name, '>')
+  call s:clear_commandline(l:term_buf_name)
+  call s:open_scratch_buffer(l:term_buf_name)
+  call s:put_command(l:command)
+endfunction
+
+tnoremap <silent> <Plug>Terminus <c-\><c-n>:call <SID>edit_command()<cr>
+
+tmap <c-x> <Plug>Terminus
 nmap <c-t> :call <SID>start_terminal('/usr/local/bin/fish')<cr>
