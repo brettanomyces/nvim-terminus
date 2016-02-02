@@ -1,6 +1,8 @@
 " TODO reasoning for using bufname vs bufnr
 " {bufname, job_id}
 let g:terminus_terms = {}
+let g:terminus_max_command_length = 10000
+let g:terminus_prompt = '>'
 
 " Start a job and add id to list
 function! s:start_terminal(cmd)
@@ -10,7 +12,7 @@ function! s:start_terminal(cmd)
 endfunction
 
 " open a scratch buffer and return the bufname
-function! s:open_scratch_buffer(term_buf_name)
+function! s:open_scratch_buffer(term_buf_name, command)
   " open new empty buffer
   new
 
@@ -21,28 +23,23 @@ function! s:open_scratch_buffer(term_buf_name)
 
   " send command back to terminal when we leave this buffer. Note that we
   " can't use arguments in autocmd as they won't exist when autocmd is run so
-  " we must use execute to resolve it
+  " we must use execute to resolve those arguments beforehand
   execute 'autocmd BufLeave <buffer> 
         \ call jobsend(' . g:terminus_terms[a:term_buf_name] . ', join(getline(1, ''$''), "\n")) 
         \ | autocmd! BufLeave <buffer>'
 
-endfunction
+  call s:put_command(a:command)
 
-function! s:clear_terminal(bufname)
-  call jobsend(g:terminus_terms[a:bufname], '')
 endfunction
 
 function! s:clear_commandline(bufname)
   let i = 0
-  while i < 10
+  while i < g:terminus_max_command_length
     " use backspace to clear the commandline rather than 
+    " send 10 backspace's at once to reduce lag
     call jobsend(g:terminus_terms[a:bufname], '')
-    let i += 1
+    let i += 10
   endwhile
-endfunction
-
-function! s:populate_commandline(bufname, command)
-  call jobsend(g:terminus_terms[a:bufname], a:command)
 endfunction
 
 function! s:extract_command(bufname, prompt)
@@ -55,7 +52,7 @@ function! s:extract_command(bufname, prompt)
       " combine all the lines from the line containing the prompt to the last line into a single string
       let l:commandline = join(getline(l:line_number, '$'), "\n")      
       " save command to a script local variable
-      return s:strip_prompt(l:commandline, a:prompt)
+      return s:format_command(s:strip_prompt(l:commandline, a:prompt))
     endif
     let l:line_number = l:line_number - 1
   endwhile
@@ -69,33 +66,27 @@ function! s:strip_prompt(commandline, prompt)
   return strpart(a:commandline, l:prompt_idx)
 endfunction
 
-function! s:put_command(command)
-  " TODO investigate using append()
-  put! =a:command
-  " TODO format command before putting it in the buffer?
-  call s:format_command()
+" remove extra whitespace and newlines caused by our method of extracting text
+" from the terminal buffer
+function! s:format_command(command)
+  " remove all whitespace following a newline
+  let l:command = substitute(a:command, '\(\n\)\s*', '\n', "g")
+  " remove newlines that do not come after a backslash
+  let l:command = substitute(l:command, '\([^\\]\)\n*', '\1', "g")
+  return l:command
 endfunction
 
-function! s:format_command()
-  " strip leading whitespace
-  %left
-
-  " a single line in terminal buffer that wraps is yanked as two lines
-  " so we must join to recombine it. However we do not want to join lines
-  " that end with a '\'.
-
-  " replace backslash followed by newline with \$ so we can see where to add newlines after join
-  silent! %substitute/\\$/\\\$
-  %join!
-  silent! %substitute/\\\$/\\\r/g
+function! s:put_command(command)
+  put =a:command
+  " remove the (empty) first line
+  0,1delete
 endfunction
 
 function! s:edit_command()
   let term_buf_name = bufname('%')
-  let command = s:extract_command(l:term_buf_name, '>')
+  let command = s:extract_command(l:term_buf_name, g:terminus_prompt)
   call s:clear_commandline(l:term_buf_name)
-  call s:open_scratch_buffer(l:term_buf_name)
-  call s:put_command(l:command)
+  call s:open_scratch_buffer(l:term_buf_name, l:command)
 endfunction
 
 tnoremap <silent> <Plug>Terminus <c-\><c-n>:call <SID>edit_command()<cr>
