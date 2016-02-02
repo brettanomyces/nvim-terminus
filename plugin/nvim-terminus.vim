@@ -1,5 +1,5 @@
-" TODO reasoning for using bufname vs bufnr
-" {bufname, job_id}
+" not all buffers have names to use bufnr
+" {bufnr, job_id}
 let g:terminus_terms = {}
 let g:terminus_max_command_length = 10000
 let g:terminus_prompt = '>'
@@ -8,11 +8,11 @@ let g:terminus_prompt = '>'
 function! s:start_terminal(cmd)
   enew
   let job_id = termopen(a:cmd)
-  let g:terminus_terms[bufname('%')] = l:job_id
+  let g:terminus_terms[bufnr('%')] = l:job_id
 endfunction
 
-" open a scratch buffer and return the bufname
-function! s:open_scratch_buffer(term_buf_name, command)
+" open a new scratch buffer
+function! s:open_scratch_buffer(bufnr, command)
   " open new empty buffer
   new
 
@@ -25,24 +25,26 @@ function! s:open_scratch_buffer(term_buf_name, command)
   " can't use arguments in autocmd as they won't exist when autocmd is run so
   " we must use execute to resolve those arguments beforehand
   execute 'autocmd BufLeave <buffer> 
-        \ call jobsend(' . g:terminus_terms[a:term_buf_name] . ', join(getline(1, ''$''), "\n")) 
+        \ call jobsend(' . g:terminus_terms[a:bufnr] . ', join(getline(1, ''$''), "\n")) 
         \ | autocmd! BufLeave <buffer>'
 
   call s:put_command(a:command)
 
 endfunction
 
-function! s:clear_commandline(bufname)
+" clear the command line of the given bufnr
+function! s:clear_commandline(bufnr)
   let i = 0
   while i < g:terminus_max_command_length
     " use backspace to clear the commandline rather than 
     " send 10 backspace's at once to reduce lag
-    call jobsend(g:terminus_terms[a:bufname], '')
+    call jobsend(g:terminus_terms[a:bufnr], '')
     let i += 10
   endwhile
 endfunction
 
-function! s:extract_command(bufname, prompt)
+" extract the command that follows the given promt from the current buffer
+function! s:extract_command(prompt)
   " starting at the last line search backwards through the file for a line containing the prompt
   let l:line_number = line('$')
   while l:line_number > 0
@@ -51,7 +53,6 @@ function! s:extract_command(bufname, prompt)
     if match(getline(l:line_number), a:prompt . l:space_or_eol) !=# -1
       " combine all the lines from the line containing the prompt to the last line into a single string
       let l:commandline = join(getline(l:line_number, '$'), "\n")      
-      " save command to a script local variable
       return s:format_command(s:strip_prompt(l:commandline, a:prompt))
     endif
     let l:line_number = l:line_number - 1
@@ -61,6 +62,7 @@ function! s:extract_command(bufname, prompt)
   echoerr "Could not find prompt '" . l:prompt . "' in buffer"
 endfunction
 
+" strip the given prompt from the commandline, leaving only the command
 function! s:strip_prompt(commandline, prompt)
   let l:prompt_idx = stridx(a:commandline, a:prompt) + len(a:prompt) + 1
   return strpart(a:commandline, l:prompt_idx)
@@ -76,17 +78,19 @@ function! s:format_command(command)
   return l:command
 endfunction
 
+" put the given command into the current buffer
 function! s:put_command(command)
   put =a:command
   " remove the (empty) first line
   0,1delete
 endfunction
 
+" edit the current command on the commandline of a terminal 
 function! s:edit_command()
-  let term_buf_name = bufname('%')
-  let command = s:extract_command(l:term_buf_name, g:terminus_prompt)
-  call s:clear_commandline(l:term_buf_name)
-  call s:open_scratch_buffer(l:term_buf_name, l:command)
+  let term_buf_nr = bufnr('%')
+  let command = s:extract_command(g:terminus_prompt)
+  call s:clear_commandline(l:term_buf_nr)
+  call s:open_scratch_buffer(l:term_buf_nr, l:command)
 endfunction
 
 tnoremap <silent> <Plug>Terminus <c-\><c-n>:call <SID>edit_command()<cr>
