@@ -9,6 +9,11 @@ function! s:start_terminal(cmd)
   enew
   let job_id = termopen(a:cmd)
   let g:terminus_terms[bufnr('%')] = l:job_id
+
+  execute 'autocmd BufDelete <buffer>
+        \ call remove(g:terminus_terms, ' . bufnr('%') . ')
+        \ | autocmd! BufDelete <buffer>'
+  
 endfunction
 
 " open a new scratch buffer
