@@ -1,13 +1,19 @@
 " not all buffers have names to use bufnr
 " {bufnr, job_id}
-let g:terminus_terms = {}
+let g:terminus_terms = {}  " TODO make script local
 let g:terminus_max_command_length = 10000
 let g:terminus_prompt = '>'
 
 " Start a job and add id to list
-function! s:start_terminal(cmd)
+function! s:start_terminal(...)
+  if a:0 > 0
+    let l:cmd = a:1
+  else
+    let l:cmd = &shell
+  endif
+
   enew
-  let job_id = termopen(a:cmd)
+  let job_id = termopen(l:cmd)
   let g:terminus_terms[bufnr('%')] = l:job_id
 
   execute 'autocmd BufDelete <buffer>
@@ -98,7 +104,11 @@ function! s:edit_command()
   call s:open_scratch_buffer(l:term_buf_nr, l:command)
 endfunction
 
-tnoremap <silent> <Plug>Terminus <c-\><c-n>:call <SID>edit_command()<cr>
+" Mappings
+tnoremap <silent> <Plug>TerminusEdit <c-\><c-n>:call <SID>edit_command()<cr>
 
-tmap <c-x> <Plug>Terminus
-nmap <c-t> :call <SID>start_terminal('/usr/local/bin/fish')<cr>
+tmap <c-x> <Plug>TerminusEdit
+
+" Commands
+command! -nargs=? TerminusOpen call s:start_terminal(<f-args>)
+
