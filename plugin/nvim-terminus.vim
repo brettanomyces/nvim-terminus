@@ -43,6 +43,14 @@ function! s:open_scratch_buffer(bufnr, command)
 
 endfunction
 
+" send command to job
+function! s:send_command(command, bufnr, run)
+  jobsend(g:terminus_terms[a:bufnr], command)
+  if (a:run ==# true)
+    jobsend(g:terminus_terms[a:bufnr], "")
+  endif
+endfunction
+
 " clear the command line of the given bufnr
 function! s:clear_commandline(bufnr)
   let i = 0
@@ -102,6 +110,29 @@ function! s:edit_command()
   let command = s:extract_command(g:terminus_prompt)
   call s:clear_commandline(l:term_buf_nr)
   call s:open_scratch_buffer(l:term_buf_nr, l:command)
+endfunction
+
+" run the last visual selection in a terminal
+function! Run_command()
+  let l:filetype = &filetype
+  " TODO pull from the characters not just the lines
+  let l:command = join(getline(getpos("'<")[1], getpos("'>")[1]), "\n")
+  echom "filetype: " . l:filetype
+  echom "command: " . l:command
+
+endfunction
+
+" find a terminal buffer that can run the command base on the filetype of the
+" buffer the command came from, returns 0 if there is no termial corresponding
+" to that filetype
+function! Find_terminal(type)
+  for l:bufnr in keys(g:terminus_terms)
+    " coerce bufnr to be a number by adding 0
+    let l:bufname = bufname(l:bufnr + 0)
+    
+
+  endfor
+
 endfunction
 
 " Mappings
