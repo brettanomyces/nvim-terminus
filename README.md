@@ -1,17 +1,16 @@
 # nvim-terminus
 
-A plugin to allow one to easily move code between a 'normal' buffer and a
-terminal buffer.
+Edit your current command in a scratch buffer. The command may come from any
+commandline interpreter running inside a
+[Neovim](https://github.com/neovim/neovim) terminal, e.g.
+bash/fish/lua/ruby/... 
 
-This plugin attempts to cover two use cases:
+This plugin provides the same functionality as
+[nvim-editcommand](https://github.com/brettanomyces/nvim-editcommand) but uses
+jobcontrol to communicate with the terminal rather than the dirty vimscipt hack
+used by nvim-editcommand. The downside of this is that terminals must be
+started using the TerminusOpen function/command provided by this plugin.
 
-1. Edit your current terminal command inside a buffer (and copy it back).
-2. Run some code from your current buffer inside a terminal. 
-
-Terminals are shell interpreters running in a Neovim terminal buffer. E.g.
-Bash, Fish, Zsh, Python, Ruby, etc. 
-
-If you are only interested in usecase #2 then I suggest using
-[kassio/neoterm](https://github.com/kassio/neoterm) which this plugin is
-heavily inspired by.
-
+This plugin differs from [neoterm](https://github.com/kassio/neoterm) in that
+nvim-terminus allows you to edit a command from a terminal, inside a text buffer, while
+neoterm allows you to run a command from a text buffer inside a terminal.
