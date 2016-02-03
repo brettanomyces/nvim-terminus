@@ -123,16 +123,16 @@ function! Run_command()
 endfunction
 
 " find a terminal buffer that can run the command base on the filetype of the
-" buffer the command came from, returns 0 if there is no termial corresponding
+" buffer the command came from, returns -1 if there is no termial corresponding
 " to that filetype
 function! Find_terminal(type)
   for l:bufnr in keys(g:terminus_terms)
     " coerce bufnr to be a number by adding 0
-    let l:bufname = bufname(l:bufnr + 0)
-    
-
+    if match(bufname(l:bufnr +0), a:type) !=# -1
+      return l:bufnr
+    endif
   endfor
-
+  return -1
 endfunction
 
 " Mappings
