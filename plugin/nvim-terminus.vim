@@ -16,10 +16,16 @@ function! s:start_terminal(...)
   let job_id = termopen(l:cmd)
   let g:terminus_terms[bufnr('%')] = l:job_id
 
-  execute 'autocmd BufDelete <buffer>
-        \ call remove(g:terminus_terms, ' . bufnr('%') . ')
-        \ | autocmd! BufDelete <buffer>'
+  autocmd BufDelete <buffer>
+        \ call s:forget_terminal(expand('<abuf>'))
+        \ | autocmd! BufDelete <buffer>
   
+endfunction
+
+function! s:forget_terminal(bufnr)
+  if has_key(g:terminus_terms, a:bufnr)
+    call remove(g:terminus_terms, a:bufnr)
+  endif
 endfunction
 
 " open a new scratch buffer
@@ -36,11 +42,15 @@ function! s:open_scratch_buffer(bufnr, command)
   " can't use arguments in autocmd as they won't exist when autocmd is run so
   " we must use execute to resolve those arguments beforehand
   execute 'autocmd BufLeave <buffer> 
-        \ call jobsend(' . g:terminus_terms[a:bufnr] . ', join(getline(1, ''$''), "\n")) 
+        \ call s:send_command('. a:bufnr . ', join(getline(1, ''$''), "\n")) 
         \ | autocmd! BufLeave <buffer>'
 
   call s:put_command(a:command)
 
+endfunction
+
+function! s:send_command(bufnr, command)
+  call jobsend(g:terminus_terms[a:bufnr], a:command)
 endfunction
 
 " clear the command line of the given bufnr
