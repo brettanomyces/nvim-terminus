@@ -5,7 +5,7 @@ let g:terminus_max_command_length = 10000
 let g:terminus_prompt = '>'
 
 " if a user has not entered a command then there will not be a space after the last prompt
-let s:space_or_eol = '\( \|$|\n\)'
+let s:space_or_eol = '\( \|$\|\n\)'
 
 " Start a job and add id to list
 function! s:start_terminal(...)
@@ -81,7 +81,7 @@ function! s:extract_command(prompt)
   endwhile
 
   " if we reach this point then the prompt was not found
-  echoerr "Could not find prompt '" . l:prompt . "' in buffer"
+  echoerr "Could not find prompt '" . a:prompt . "' in buffer"
 endfunction
 
 " strip the given prompt from the commandline, leaving only the command
