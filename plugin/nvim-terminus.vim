@@ -4,6 +4,9 @@ let g:terminus_terms = {}  " TODO make script local
 let g:terminus_max_command_length = 10000
 let g:terminus_prompt = '>'
 
+" if a user has not entered a command then there will not be a space after the last prompt
+let s:space_or_eol = '\( \|$|\n\)'
+
 " Start a job and add id to list
 function! s:start_terminal(...)
   if a:0 > 0
@@ -69,9 +72,7 @@ function! s:extract_command(prompt)
   " starting at the last line search backwards through the file for a line containing the prompt
   let l:line_number = line('$')
   while l:line_number > 0
-    " if a user has not entered a command then there will not be a space after the last prompt
-    let l:space_or_eol = '\( \|$\)'
-    if match(getline(l:line_number), a:prompt . l:space_or_eol) !=# -1
+    if match(getline(l:line_number), a:prompt . s:space_or_eol) !=# -1
       " combine all the lines from the line containing the prompt to the last line into a single string
       let l:commandline = join(getline(l:line_number, '$'), "\n")      
       return s:format_command(s:strip_prompt(l:commandline, a:prompt))
@@ -85,7 +86,7 @@ endfunction
 
 " strip the given prompt from the commandline, leaving only the command
 function! s:strip_prompt(commandline, prompt)
-  let l:prompt_idx = stridx(a:commandline, a:prompt) + len(a:prompt) + 1
+  let l:prompt_idx = match(a:commandline, g:terminus_prompt . s:space_or_eol . '\zs')
   return strpart(a:commandline, l:prompt_idx)
 endfunction
 
