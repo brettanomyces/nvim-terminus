@@ -1,8 +1,32 @@
 " not all buffers have names to use bufnr
 " {bufnr, job_id}
-let g:terminus_terms = {}  " TODO make script local
+let g:terminus_terms = {}
 let g:terminus_max_command_length = 10000
 let g:terminus_prompt = '>'
+
+
+" start the prototype
+let Terminus = {}
+
+" the constructor
+function! Terminus.New()
+  let obj = copy(self)
+  " open new empty buffer which the terminal will use
+  enew
+  let obj.job_id = termopen(&shell)
+  let obj.bufnr = bufnr('%')
+
+  function! obj.test()
+    echom "job_id: " . self.job_id
+  endfunction
+
+  return obj
+endfunction
+
+" an instance method
+function! Terminus.Bufnr()
+  echom "test: " . self.bufnr
+endfunction
 
 " if a user has not entered a command then there will not be a space after the last prompt
 let s:space_or_eol = '\( \|$\|\n\)'
