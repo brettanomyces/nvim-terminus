@@ -4,59 +4,34 @@ let g:terminus_terms = {}
 let g:terminus_max_command_length = 10000
 let g:terminus_prompt = '>'
 
+" if a user has not entered a command then there will not be a space after the last prompt
+let s:space_or_eol = '\( \|$\|\n\)'
 
 " start the prototype
 let Terminus = {}
 
-" the constructor
-function! Terminus.New()
-  let obj = copy(self)
-  " open new empty buffer which the terminal will use
-  enew
-  let obj.job_id = termopen(&shell)
-  let obj.bufnr = bufnr('%')
-
-  function! obj.test()
-    echom "job_id: " . self.job_id
-  endfunction
-
-  return obj
+" instance methods, shared by all copies of the prototype
+function! Terminus.Clear()
+  let i = 0
+  while i < g:terminus_max_command_length
+    " use backspace to clear the commandline rather than 
+    " send 10 backspace's at once to reduce lag
+    call jobsend(self.job_id, '')
+    let i += 10
+  endwhile
 endfunction
 
-" an instance method
-function! Terminus.Bufnr()
-  echom "test: " . self.bufnr
+function! Terminus.Edit()
+  let l:command = s:extract_command(g:terminus_prompt)
+  call self.Clear()
+  call self.OpenScratch(l:command)
 endfunction
 
-" if a user has not entered a command then there will not be a space after the last prompt
-let s:space_or_eol = '\( \|$\|\n\)'
-
-" Start a job and add id to list
-function! s:start_terminal(...)
-  if a:0 > 0
-    let l:cmd = a:1
-  else
-    let l:cmd = &shell
-  endif
-
-  enew
-  let job_id = termopen(l:cmd)
-  let g:terminus_terms[bufnr('%')] = l:job_id
-
-  autocmd BufDelete <buffer>
-        \ call s:forget_terminal(expand('<abuf>'))
-        \ | autocmd! BufDelete <buffer>
-  
+function! Terminus.SetCommand(command)
+  call jobsend(self.job_id, a:command)
 endfunction
 
-function! s:forget_terminal(bufnr)
-  if has_key(g:terminus_terms, a:bufnr)
-    call remove(g:terminus_terms, a:bufnr)
-  endif
-endfunction
-
-" open a new scratch buffer
-function! s:open_scratch_buffer(bufnr, command)
+function! Terminus.OpenScratch(command)
   " open new empty buffer
   new
 
@@ -69,26 +44,39 @@ function! s:open_scratch_buffer(bufnr, command)
   " can't use arguments in autocmd as they won't exist when autocmd is run so
   " we must use execute to resolve those arguments beforehand
   execute 'autocmd BufLeave <buffer> 
-        \ call s:send_command('. a:bufnr . ', join(getline(1, ''$''), "\n")) 
+        \ call g:terminus_terms[' . self.bufnr . '].SetCommand(join(getline(1, ''$''), "\n"))
         \ | autocmd! BufLeave <buffer>'
 
   call s:put_command(a:command)
 
 endfunction
 
-function! s:send_command(bufnr, command)
-  call jobsend(g:terminus_terms[a:bufnr], a:command)
+function! Terminus.Erase()
+  if has_key(g:terminus_terms, self.bufnr)
+    call remove(g:terminus_terms, self.bufnr)
+  endif
 endfunction
 
-" clear the command line of the given bufnr
-function! s:clear_commandline(bufnr)
-  let i = 0
-  while i < g:terminus_max_command_length
-    " use backspace to clear the commandline rather than 
-    " send 10 backspace's at once to reduce lag
-    call jobsend(g:terminus_terms[a:bufnr], '')
-    let i += 10
-  endwhile
+" the constructor
+function! Terminus.New(...)
+  if a:0 > 0
+    let l:cmd = a:1
+  else
+    let l:cmd = &shell
+  endif
+
+  let obj = copy(self)
+  " open new empty buffer which the terminal will use
+  enew
+  let obj.job_id = termopen(l:cmd)
+  let obj.bufnr = bufnr('%')
+
+  let g:terminus_terms[obj.bufnr] = obj
+  execute 'autocmd BufDelete <buffer> 
+        \ call g:terminus_terms[' . obj.bufnr . '.Erase() 
+        \ | autocmd! BufDelete <buffer>'
+
+  return obj
 endfunction
 
 " extract the command that follows the given promt from the current buffer
@@ -131,19 +119,11 @@ function! s:put_command(command)
   0,1delete
 endfunction
 
-" edit the current command on the commandline of a terminal 
-function! s:edit_command()
-  let term_buf_nr = bufnr('%')
-  let command = s:extract_command(g:terminus_prompt)
-  call s:clear_commandline(l:term_buf_nr)
-  call s:open_scratch_buffer(l:term_buf_nr, l:command)
-endfunction
-
 " Mappings
-tnoremap <silent> <Plug>TerminusEdit <c-\><c-n>:call <SID>edit_command()<cr>
+tnoremap <silent> <Plug>TerminusEdit <c-\><c-n>:call g:terminus_terms[bufnr('%')].Edit()<cr>
 
 tmap <c-x> <Plug>TerminusEdit
 
 " Commands
-command! -nargs=? TerminusOpen call s:start_terminal(<f-args>)
+command! -nargs=? TerminusOpen call Terminus.New(<f-args>)
 
