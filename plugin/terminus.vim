@@ -2,7 +2,6 @@
 " {bufnr, job_id}
 let g:terminus_terms = {}
 let g:terminus_max_command_length = 10000
-let g:terminus_prompt = '>'
 
 " if a user has not entered a command then there will not be a space after the last prompt
 let s:space_or_eol = '\( \|$\|\n\)'
@@ -11,7 +10,7 @@ let s:space_or_eol = '\( \|$\|\n\)'
 let Terminus = {}
 
 " instance methods, shared by all copies of the prototype
-function! Terminus.Clear()
+function! Terminus.ClearCommand()
   let i = 0
   while i < g:terminus_max_command_length
     " use backspace to clear the commandline rather than 
@@ -22,13 +21,29 @@ function! Terminus.Clear()
 endfunction
 
 function! Terminus.Edit()
-  let l:command = s:extract_command(g:terminus_prompt)
-  call self.Clear()
+  let l:command = self.GetCommand()
+  call self.ClearCommand()
   call self.OpenScratch(l:command)
 endfunction
 
 function! Terminus.SetCommand(command)
   call jobsend(self.job_id, a:command)
+endfunction
+
+function! Terminus.GetCommand()
+  " starting at the last line search backwards through the file for a line containing the prompt
+  let l:line_number = line('$')
+  while l:line_number > 0
+    if match(getline(l:line_number), self.prompt . s:space_or_eol) !=# -1
+      " combine all the lines from the line containing the prompt to the last line into a single string
+      let l:commandline = join(getline(l:line_number, '$'), "\n")      
+      return s:format_command(s:strip_prompt(l:commandline, self.prompt))
+    endif
+    let l:line_number = l:line_number - 1
+  endwhile
+
+  " if we reach this point then the prompt was not found
+  echoerr "Could not find prompt '" . a:prompt . "' in buffer"
 endfunction
 
 function! Terminus.OpenScratch(command)
@@ -57,6 +72,7 @@ function! Terminus.Erase()
   endif
 endfunction
 
+
 " the constructor
 function! Terminus.New(...)
   if a:0 > 0
@@ -70,35 +86,20 @@ function! Terminus.New(...)
   enew
   let obj.job_id = termopen(l:cmd)
   let obj.bufnr = bufnr('%')
+  " TODO update prompt when user enters an interpreter
+  let obj.prompt = '>'
 
   let g:terminus_terms[obj.bufnr] = obj
   execute 'autocmd BufDelete <buffer> 
-        \ call g:terminus_terms[' . obj.bufnr . '.Erase() 
+        \ call g:terminus_terms[' . obj.bufnr . '].Erase() 
         \ | autocmd! BufDelete <buffer>'
 
   return obj
 endfunction
 
-" extract the command that follows the given promt from the current buffer
-function! s:extract_command(prompt)
-  " starting at the last line search backwards through the file for a line containing the prompt
-  let l:line_number = line('$')
-  while l:line_number > 0
-    if match(getline(l:line_number), a:prompt . s:space_or_eol) !=# -1
-      " combine all the lines from the line containing the prompt to the last line into a single string
-      let l:commandline = join(getline(l:line_number, '$'), "\n")      
-      return s:format_command(s:strip_prompt(l:commandline, a:prompt))
-    endif
-    let l:line_number = l:line_number - 1
-  endwhile
-
-  " if we reach this point then the prompt was not found
-  echoerr "Could not find prompt '" . a:prompt . "' in buffer"
-endfunction
-
-" strip the given prompt from the commandline, leaving only the command
+" strip the given prompt from the commandline, returning only the command
 function! s:strip_prompt(commandline, prompt)
-  let l:prompt_idx = match(a:commandline, g:terminus_prompt . s:space_or_eol . '\zs')
+  let l:prompt_idx = match(a:commandline, a:prompt . s:space_or_eol . '\zs')
   return strpart(a:commandline, l:prompt_idx)
 endfunction
 
@@ -126,4 +127,3 @@ tmap <c-x> <Plug>TerminusEdit
 
 " Commands
 command! -nargs=? TerminusOpen call Terminus.New(<f-args>)
-
