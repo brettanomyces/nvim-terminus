@@ -1,19 +1,22 @@
 
-if !exists('g:terminus_terms')
-  let g:terminus_terms = {}
+if !exists('g:terminus_terminals')
+  let g:terminus_terminals = {}
 endif
 
-let g:terminus_max_command_length = 10000
+if !exists('g:terminus_update_terminal_name')
+  let g:terminus_update_terminal_name = 1
+endif
+
+if !exists('g:terminus_max_command_length')
+  let g:terminus_max_command_length = 10000
+endif
+
+if !exists('g:terminus_default_prompt')
+  let g:terminus_default_prompt = '>'
+endif
 
 " if a user has not entered a command then there will not be a space after the last prompt
 let s:space_or_eol = '\( \|$\|\n\)'
-let s:terminus_default_prompt = '>'
-let s:terminus_prompts = {
-      \ 'bash' : '$',
-      \ 'zsh' : '%',
-      \ 'fish' : '>',
-      \ 'lua' : '>',
-      \ 'python' : '>>>'}
 
 " start the prototype
 let Terminus = {}
@@ -39,13 +42,27 @@ function! Terminus.SetCommand(command)
   call jobsend(self.job_id, a:command)
 endfunction
 
-function! Terminus.Prompt()
-  return get(s:terminus_prompts, self.interpreter, s:terminus_default_prompt)
+function! Terminus.GetPrompt()
+  if !empty(self.prompt)
+    return self.prompt
+  else
+    return g:terminus_default_prompt
+  endif
 endfunction
 
+" Set the prompt for the current 
+function! Terminus.SetPrompt(...)
+  if a:0 > 0
+    let self.prompt = a:1
+  else
+    let self.prompt = g:terminus_default_prompt
+  endif
+endfunction
+
+
 function! Terminus.GetCommand()
-  let l:commandline = s:get_commandline(self.Prompt())
-  return s:format_command(s:strip_prompt(l:commandline, self.Prompt()))
+  let l:commandline = s:get_commandline(self.GetPrompt())
+  return s:format_command(s:strip_prompt(l:commandline, self.GetPrompt()))
 endfunction
 
 function! Terminus.OpenScratch(command)
@@ -61,7 +78,7 @@ function! Terminus.OpenScratch(command)
   " can't use arguments in autocmd as they won't exist when autocmd is run so
   " we must use execute to resolve those arguments beforehand
   execute 'autocmd BufLeave <buffer> 
-        \ call g:terminus_terms[' . self.bufnr . '].SetCommand(join(getline(1, ''$''), "\n"))
+        \ call g:terminus_terminals[' . self.bufnr . '].SetCommand(join(getline(1, ''$''), "\n"))
         \ | autocmd! BufLeave <buffer>'
 
   call s:put_command(a:command)
@@ -69,15 +86,15 @@ function! Terminus.OpenScratch(command)
 endfunction
 
 function! Terminus.Erase()
-  if has_key(g:terminus_terms, self.bufnr)
-    call remove(g:terminus_terms, self.bufnr)
+  if has_key(g:terminus_terminals, self.bufnr)
+    call remove(g:terminus_terminals, self.bufnr)
   endif
 endfunction
 
 function! s:handle_stdout(job_id, data, event)
-  for key in keys(g:terminus_terms)
-    if g:terminus_terms[key].job_id ==# a:job_id
-      call g:terminus_terms[key].HandleStdout(a:data, a:event)
+  for key in keys(g:terminus_terminals)
+    if g:terminus_terminals[key].job_id ==# a:job_id
+      call g:terminus_terminals[key].HandleStdout(a:data, a:event)
     endif
   endfor
 endfunction
@@ -85,24 +102,26 @@ endfunction
 " WARNING: this is handled asynchronously! 
 " Currently only extracts and stores the prompt
 function! Terminus.HandleStdout(data, event)
-  if bufnr('%') ==# self.bufnr
-    if strlen(self.stdout_buf) > 1000
-      let self.stdout_buf = ''
-    endif
-    let self.stdout_buf = self.stdout_buf . join(a:data, "\n")
-    " get prompt string
-    let prompt_string = matchstr(self.stdout_buf, '\e\]0;\zs.\{-}\ze')
-    if !empty(l:prompt_string)
-      " remove color control characters and escape string so it can be used as a filename
-      let self.fname = fnameescape(self.job_id . ' ' . substitute(l:prompt_string, '\e\[[0-9;]\+[mK]', '', 'g'))
+  if g:terminus_update_terminal_name
+    if bufnr('%') ==# self.bufnr
+      if strlen(self.stdout_buf) > 1000
+        let self.stdout_buf = ''
+      endif
+      let self.stdout_buf = self.stdout_buf . join(a:data, "\n")
+      " get prompt string
+      let prompt_string = matchstr(self.stdout_buf, '\e\]0;\zs.\{-}\ze')
+      if !empty(l:prompt_string)
+        " remove color control characters and escape string so it can be used as a filename
+        let self.fname = fnameescape(self.job_id . ' ' . substitute(l:prompt_string, '\e\[[0-9;]\+[mK]', '', 'g'))
 
-      " TODO won't always be the case!
-      " let self.cmd split(l:prompt_string)[0]
-      " let self.dir split(l:prompt_string)[1]
+        " TODO won't always be the case!
+        " let self.cmd split(l:prompt_string)[0]
+        " let self.dir split(l:prompt_string)[1]
 
-      call self.Rename()
-      " TODO we may be throwing away a prompt if two appear in the same batch of a:data
-      let self.stdout_buf = ''
+        call self.Rename()
+        " TODO we may be throwing away a prompt if two appear in the same batch of a:data
+        let self.stdout_buf = ''
+      endif
     endif
   endif
 endfunction
@@ -111,7 +130,6 @@ function! Terminus.Rename()
   execute 'file ' . self.fname
   redraw!
 endfunction
-
 
 " the constructor
 function! Terminus.New(...)
@@ -122,19 +140,19 @@ function! Terminus.New(...)
   endif
 
   let obj = copy(self)
-  " open new empty buffer which the terminal will use
-  enew
+  let obj.prompt = g:terminus_default_prompt
   let obj.stdout_buf = ''
   let obj.shell = l:cmd
+  " open new empty buffer which the terminal will use
+  enew
   let obj.job_id = termopen(l:cmd, {'on_stdout':function('s:handle_stdout')})
   let obj.bufnr = bufnr('%')
-  let obj.dir = ''
   let obj.fname = ''
 
-  let g:terminus_terms[obj.bufnr] = obj
+  let g:terminus_terminals[obj.bufnr] = obj
 
   execute 'autocmd BufDelete <buffer> 
-        \ call g:terminus_terms[' . obj.bufnr . '].Erase() 
+        \ call g:terminus_terminals[' . obj.bufnr . '].Erase() 
         \ | autocmd! BufDelete <buffer>'
 
   return obj
@@ -181,9 +199,14 @@ function! s:put_command(command)
   0,1delete
 endfunction
 
+function! s:current_terminal()
+  return g:terminus_terminals[bufnr('%')]
+endfunction
+
 " Mappings
-tnoremap <silent> <Plug>TerminusEdit <c-\><c-n>:call g:terminus_terms[bufnr('%')].Edit()<cr>
+tnoremap <silent> <Plug>TerminusEdit <c-\><c-n>:call <SID>current_terminal().Edit()<cr>
 tmap <c-x> <Plug>TerminusEdit
 
 " Commands
 command! -nargs=? TerminusOpen call Terminus.New(<f-args>)
+command! -nargs=? TerminusSetPrompt call <SID>current_terminal().SetPrompt(<f-args>)
