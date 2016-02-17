@@ -1,6 +1,8 @@
-" not all buffers have names to use bufnr
-" {bufnr, job_id}
-let g:terminus_terms = {}
+
+if !exists('g:terminus_terms')
+  let g:terminus_terms = {}
+endif
+
 let g:terminus_max_command_length = 10000
 
 " if a user has not entered a command then there will not be a space after the last prompt
@@ -29,8 +31,8 @@ endfunction
 
 function! Terminus.Edit()
   let l:command = self.GetCommand()
-  call self.ClearCommand()
   call self.OpenScratch(l:command)
+  call self.ClearCommand()
 endfunction
 
 function! Terminus.SetCommand(command)
@@ -43,7 +45,7 @@ endfunction
 
 function! Terminus.GetCommand()
   let l:commandline = s:get_commandline(self.Prompt())
-  return s:format_command(l:commandline)
+  return s:format_command(s:strip_prompt(l:commandline, self.Prompt()))
 endfunction
 
 function! Terminus.OpenScratch(command)
@@ -80,26 +82,30 @@ function! s:handle_stdout(job_id, data, event)
   endfor
 endfunction
 
+" WARNING: this is handled asynchronously! 
+" Currently only extracts and stores the prompt
 function! Terminus.HandleStdout(data, event)
-  " TODO handle stdout_buf getting really big!
   if strlen(self.stdout_buf) > 1000
      let self.stdout_buf = ''
    endif
   let self.stdout_buf = self.stdout_buf . join(a:data, "\n")
+  echom substitute(self.stdout_buf, '\e\[[0-9;]\+[mK]', '', 'g')  
   " get prompt string
-  let prompt_string = matchstr(self.stdout_buf, '\]0;\zs.*\ze')
+  let prompt_string = matchstr(self.stdout_buf, '\]0;\zs.\{-}\ze')
   if !empty(l:prompt_string)
     " remove color control characters and escape string so it can be used as a filename
-    let l:fname = fnameescape(self.job_id . ' ' . substitute(l:prompt_string, '\e\[[0-9;]\+[mK]', '', 'g'))
-    if self.fname !=# l:fname
-      let l:current_buffer = bufnr('%')
-      execute 'buffer ' . self.bufnr
-      execute 'file ' . l:fname
-      redraw!
-      execute 'buffer ' . l:current_buffer
+    let self.fname = fnameescape(self.job_id . ' ' . substitute(l:prompt_string, '\e\[[0-9;]\+[mK]', '', 'g'))
+    if bufnr('%') ==# self.bufnr
+       call self.Rename()
     endif
+    " TODO we may be throwing away a prompt if two appear in the same batch of a:data
     let self.stdout_buf = ''
   endif
+endfunction
+
+function! Terminus.Rename()
+  execute 'file ' . self.fname
+  redraw!
 endfunction
 
 
@@ -115,11 +121,10 @@ function! Terminus.New(...)
   " open new empty buffer which the terminal will use
   enew
   let obj.stdout_buf = ''
-  let obj.fname = ''
   let obj.test = 'test'
   let obj.job_id = termopen(l:cmd, {'on_stdout':function('s:handle_stdout')})
   let obj.bufnr = bufnr('%')
-
+  let obj.fname = ''
   " TODO update prompt when user enters an interpreter
   let obj.interpreter = 'fish'
 
@@ -133,17 +138,14 @@ function! Terminus.New(...)
 endfunction
 
 function! s:get_commandline(prompt)
-  " don't search back more than 100 lines
-  let l:search_back = 100
   let l:line_number = line('$')
-  while l:line_number > 0 && l:search_back > 0
+  while l:line_number > 0 
     if match(getline(l:line_number), a:prompt . s:space_or_eol) !=# -1
       " combine all the lines from the line containing the prompt to the last line into a single string
       let l:commandline = join(getline(l:line_number, '$'), "\n")      
       return s:format_command(l:commandline)
     endif
-    let l:line_number = l:line_number - 1T
-    let l:search_back = l:search_back - 1
+    let l:line_number = l:line_number - 1
   endwhile
   return ''
 endfunction
