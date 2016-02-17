@@ -1,38 +1,54 @@
-" not all buffers have names to use bufnr
-" {bufnr, job_id}
-let g:terminus_terms = {}  " TODO make script local
+
+if !exists('g:terminus_terms')
+  let g:terminus_terms = {}
+endif
+
 let g:terminus_max_command_length = 10000
-let g:terminus_prompt = '>'
 
 " if a user has not entered a command then there will not be a space after the last prompt
 let s:space_or_eol = '\( \|$\|\n\)'
+let s:terminus_default_prompt = '>'
+let s:terminus_prompts = {
+      \ 'bash' : '$',
+      \ 'zsh' : '%',
+      \ 'fish' : '>',
+      \ 'lua' : '>',
+      \ 'python' : '>>>'}
 
-" Start a job and add id to list
-function! s:start_terminal(...)
-  if a:0 > 0
-    let l:cmd = a:1
-  else
-    let l:cmd = &shell
-  endif
+" start the prototype
+let Terminus = {}
 
-  enew
-  let job_id = termopen(l:cmd)
-  let g:terminus_terms[bufnr('%')] = l:job_id
-
-  autocmd BufDelete <buffer>
-        \ call s:forget_terminal(expand('<abuf>'))
-        \ | autocmd! BufDelete <buffer>
-  
+" instance methods, shared by all copies of the prototype
+function! Terminus.ClearCommand()
+  let i = 0
+  while i < g:terminus_max_command_length
+    " use backspace to clear the commandline rather than 
+    " send 10 backspace's at once to reduce lag
+    call jobsend(self.job_id, '')
+    let i += 10
+  endwhile
 endfunction
 
-function! s:forget_terminal(bufnr)
-  if has_key(g:terminus_terms, a:bufnr)
-    call remove(g:terminus_terms, a:bufnr)
-  endif
+function! Terminus.Edit()
+  let l:command = self.GetCommand()
+  call self.OpenScratch(l:command)
+  call self.ClearCommand()
 endfunction
 
-" open a new scratch buffer
-function! s:open_scratch_buffer(bufnr, command)
+function! Terminus.SetCommand(command)
+  call jobsend(self.job_id, a:command)
+endfunction
+
+function! Terminus.Prompt()
+  return get(s:terminus_prompts, self.interpreter, s:terminus_default_prompt)
+endfunction
+
+function! Terminus.GetCommand()
+  let l:commandline = s:get_commandline(self.Prompt())
+  return s:format_command(s:strip_prompt(l:commandline, self.Prompt()))
+endfunction
+
+function! Terminus.OpenScratch(command)
   " open new empty buffer
   new
 
@@ -45,49 +61,107 @@ function! s:open_scratch_buffer(bufnr, command)
   " can't use arguments in autocmd as they won't exist when autocmd is run so
   " we must use execute to resolve those arguments beforehand
   execute 'autocmd BufLeave <buffer> 
-        \ call s:send_command('. a:bufnr . ', join(getline(1, ''$''), "\n")) 
+        \ call g:terminus_terms[' . self.bufnr . '].SetCommand(join(getline(1, ''$''), "\n"))
         \ | autocmd! BufLeave <buffer>'
 
   call s:put_command(a:command)
 
 endfunction
 
-function! s:send_command(bufnr, command)
-  call jobsend(g:terminus_terms[a:bufnr], a:command)
+function! Terminus.Erase()
+  if has_key(g:terminus_terms, self.bufnr)
+    call remove(g:terminus_terms, self.bufnr)
+  endif
 endfunction
 
-" clear the command line of the given bufnr
-function! s:clear_commandline(bufnr)
-  let i = 0
-  while i < g:terminus_max_command_length
-    " use backspace to clear the commandline rather than 
-    " send 10 backspace's at once to reduce lag
-    call jobsend(g:terminus_terms[a:bufnr], '')
-    let i += 10
-  endwhile
+function! s:handle_stdout(job_id, data, event)
+  for key in keys(g:terminus_terms)
+    if g:terminus_terms[key].job_id ==# a:job_id
+      call g:terminus_terms[key].HandleStdout(a:data, a:event)
+    endif
+  endfor
 endfunction
 
-" extract the command that follows the given promt from the current buffer
-function! s:extract_command(prompt)
-  " starting at the last line search backwards through the file for a line containing the prompt
+" WARNING: this is handled asynchronously! 
+" Currently only extracts and stores the prompt
+function! Terminus.HandleStdout(data, event)
+  if bufnr('%') ==# self.bufnr
+    if strlen(self.stdout_buf) > 1000
+      let self.stdout_buf = ''
+    endif
+    let self.stdout_buf = self.stdout_buf . join(a:data, "\n")
+    " get prompt string
+    let prompt_string = matchstr(self.stdout_buf, '\e\]0;\zs.\{-}\ze')
+    if !empty(l:prompt_string)
+      " remove color control characters and escape string so it can be used as a filename
+      let self.fname = fnameescape(self.job_id . ' ' . substitute(l:prompt_string, '\e\[[0-9;]\+[mK]', '', 'g'))
+
+      " TODO won't always be the case!
+      " let self.cmd split(l:prompt_string)[0]
+      " let self.dir split(l:prompt_string)[1]
+
+      call self.Rename()
+      " TODO we may be throwing away a prompt if two appear in the same batch of a:data
+      let self.stdout_buf = ''
+    endif
+  endif
+endfunction
+
+function! Terminus.Rename()
+  execute 'file ' . self.fname
+  redraw!
+endfunction
+
+
+" the constructor
+function! Terminus.New(...)
+  if a:0 > 0
+    let l:cmd = a:1
+  else
+    let l:cmd = &shell
+  endif
+
+  let obj = copy(self)
+  " open new empty buffer which the terminal will use
+  enew
+  let obj.stdout_buf = ''
+  let obj.shell = l:cmd
+  let obj.job_id = termopen(l:cmd, {'on_stdout':function('s:handle_stdout')})
+  let obj.bufnr = bufnr('%')
+  let obj.dir = ''
+  let obj.fname = ''
+
+  let g:terminus_terms[obj.bufnr] = obj
+
+  execute 'autocmd BufDelete <buffer> 
+        \ call g:terminus_terms[' . obj.bufnr . '].Erase() 
+        \ | autocmd! BufDelete <buffer>'
+
+  return obj
+endfunction
+
+function! s:get_commandline(prompt)
   let l:line_number = line('$')
-  while l:line_number > 0
+  while l:line_number > 0 
     if match(getline(l:line_number), a:prompt . s:space_or_eol) !=# -1
       " combine all the lines from the line containing the prompt to the last line into a single string
       let l:commandline = join(getline(l:line_number, '$'), "\n")      
-      return s:format_command(s:strip_prompt(l:commandline, a:prompt))
+      return s:format_command(l:commandline)
     endif
     let l:line_number = l:line_number - 1
   endwhile
-
-  " if we reach this point then the prompt was not found
-  echoerr "Could not find prompt '" . a:prompt . "' in buffer"
+  return ''
 endfunction
 
-" strip the given prompt from the commandline, leaving only the command
+" strip the given prompt from the commandline, returning only the command
 function! s:strip_prompt(commandline, prompt)
-  let l:prompt_idx = match(a:commandline, g:terminus_prompt . s:space_or_eol . '\zs')
+  let l:prompt_idx = match(a:commandline, a:prompt . s:space_or_eol . '\zs')
   return strpart(a:commandline, l:prompt_idx)
+endfunction
+
+function! s:strip_command(commandline, prompt)
+  let l:prompt_idx = match(a:commandline, '\ze' . a:prompt . s:space_or_eol)
+  return strpart(a:commandline, 0, l:prompt_idx)
 endfunction
 
 " remove extra whitespace and newlines caused by our method of extracting text
@@ -107,19 +181,9 @@ function! s:put_command(command)
   0,1delete
 endfunction
 
-" edit the current command on the commandline of a terminal 
-function! s:edit_command()
-  let term_buf_nr = bufnr('%')
-  let command = s:extract_command(g:terminus_prompt)
-  call s:clear_commandline(l:term_buf_nr)
-  call s:open_scratch_buffer(l:term_buf_nr, l:command)
-endfunction
-
 " Mappings
-tnoremap <silent> <Plug>TerminusEdit <c-\><c-n>:call <SID>edit_command()<cr>
-
+tnoremap <silent> <Plug>TerminusEdit <c-\><c-n>:call g:terminus_terms[bufnr('%')].Edit()<cr>
 tmap <c-x> <Plug>TerminusEdit
 
 " Commands
-command! -nargs=? TerminusOpen call s:start_terminal(<f-args>)
-
+command! -nargs=? TerminusOpen call Terminus.New(<f-args>)
