@@ -32,7 +32,7 @@ function! Terminus.ClearCommand()
   endwhile
 endfunction
 
-function! Terminus.Edit()
+function! Terminus.EditCommand()
   let l:command = self.GetCommand()
   call self.OpenScratch(l:command)
   call self.ClearCommand()
@@ -53,7 +53,8 @@ endfunction
 " Set the prompt for the current 
 function! Terminus.SetPrompt(...)
   if a:0 > 0
-    let self.prompt = a:1
+    " remove apostrophes and quotations
+    let self.prompt = substitute(a:1, '[''\|"]', '', 'g')
   else
     let self.prompt = g:terminus_default_prompt
   endif
@@ -204,7 +205,7 @@ function! s:current_terminal()
 endfunction
 
 " Mappings
-tnoremap <silent> <Plug>TerminusEdit <c-\><c-n>:call <SID>current_terminal().Edit()<cr>
+tnoremap <silent> <Plug>TerminusEdit <c-\><c-n>:call <SID>current_terminal().EditCommand()<cr>
 tmap <c-x> <Plug>TerminusEdit
 
 " Commands
