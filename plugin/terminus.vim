@@ -85,21 +85,25 @@ endfunction
 " WARNING: this is handled asynchronously! 
 " Currently only extracts and stores the prompt
 function! Terminus.HandleStdout(data, event)
-  if strlen(self.stdout_buf) > 1000
-     let self.stdout_buf = ''
-   endif
-  let self.stdout_buf = self.stdout_buf . join(a:data, "\n")
-  echom substitute(self.stdout_buf, '\e\[[0-9;]\+[mK]', '', 'g')  
-  " get prompt string
-  let prompt_string = matchstr(self.stdout_buf, '\]0;\zs.\{-}\ze')
-  if !empty(l:prompt_string)
-    " remove color control characters and escape string so it can be used as a filename
-    let self.fname = fnameescape(self.job_id . ' ' . substitute(l:prompt_string, '\e\[[0-9;]\+[mK]', '', 'g'))
-    if bufnr('%') ==# self.bufnr
-       call self.Rename()
+  if bufnr('%') ==# self.bufnr
+    if strlen(self.stdout_buf) > 1000
+      let self.stdout_buf = ''
     endif
-    " TODO we may be throwing away a prompt if two appear in the same batch of a:data
-    let self.stdout_buf = ''
+    let self.stdout_buf = self.stdout_buf . join(a:data, "\n")
+    " get prompt string
+    let prompt_string = matchstr(self.stdout_buf, '\e\]0;\zs.\{-}\ze')
+    if !empty(l:prompt_string)
+      " remove color control characters and escape string so it can be used as a filename
+      let self.fname = fnameescape(self.job_id . ' ' . substitute(l:prompt_string, '\e\[[0-9;]\+[mK]', '', 'g'))
+
+      " TODO won't always be the case!
+      " let self.cmd split(l:prompt_string)[0]
+      " let self.dir split(l:prompt_string)[1]
+
+      call self.Rename()
+      " TODO we may be throwing away a prompt if two appear in the same batch of a:data
+      let self.stdout_buf = ''
+    endif
   endif
 endfunction
 
@@ -121,12 +125,11 @@ function! Terminus.New(...)
   " open new empty buffer which the terminal will use
   enew
   let obj.stdout_buf = ''
-  let obj.test = 'test'
+  let obj.shell = l:cmd
   let obj.job_id = termopen(l:cmd, {'on_stdout':function('s:handle_stdout')})
   let obj.bufnr = bufnr('%')
+  let obj.dir = ''
   let obj.fname = ''
-  " TODO update prompt when user enters an interpreter
-  let obj.interpreter = 'fish'
 
   let g:terminus_terms[obj.bufnr] = obj
 
