@@ -230,10 +230,10 @@ function! s:current_terminal()
 endfunction
 
 " Mappings
-tnoremap <silent> <Plug>TerminusEdit <c-\><c-n>:call <SID>current_terminal().EditCommand()<cr>
+tnoremap <silent> <Plug>TerminusEditCommand <c-\><c-n>:call <SID>current_terminal().EditCommand()<cr>
 
 if get(g:, 'terminus_default_mappings', 0)
-  tmap <c-x> <Plug>TerminusEdit
+  tmap <c-x> <Plug>TerminusEditCommand
 endif
 
 " Commands

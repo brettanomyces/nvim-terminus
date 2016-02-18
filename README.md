@@ -38,31 +38,31 @@ Use the xterm title as the terminal buffer name. This makes it much easier to di
 
 Open a new terminal
 
-   TerminusOpen
+    TerminusOpen
 
-   TerminausOpen /bin/sh
+    TerminausOpen /bin/sh
 
 Edit the current terminal command
 
-   TerminusEditCommand
+    TerminusEditCommand
 
 Set the terminal prompt
 
-   TerminusSetPrompt >
+    TerminusSetPrompt >
 
 ## Configuration
 
 Enable the default mappings
 
-   g:terminus_default_mappings = 1
+    g:terminus_default_mappings = 1
    
 Set the default prompt 
 
-   g:terminus_default_prompt = '>'
+    g:terminus_default_prompt = '>'
 
 Enable xterm titles
 
-   g:terminus_use_xterm_title = 1
+    g:terminus_use_xterm_title = 1
 
 
 
