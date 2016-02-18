@@ -3,8 +3,8 @@ if !exists('g:terminus_terminals')
   let g:terminus_terminals = {}
 endif
 
-if !exists('g:terminus_update_terminal_name')
-  let g:terminus_update_terminal_name = 1
+if !exists('g:terminus_use_xterm_title')
+  let g:terminus_use_xterm_title = 1
 endif
 
 if !exists('g:terminus_max_command_length')
@@ -62,7 +62,7 @@ function! Terminus.GetPrompt()
   if !empty(self.prompt)
     return self.prompt
   else
-    return g:terminus_default_prompt
+    return get(g:, 'terminus_default_prompt', '>')
   endif
 endfunction
 
@@ -72,7 +72,7 @@ function! Terminus.SetPrompt(...)
     " remove apostrophes and quotations
     let self.prompt = substitute(a:1, '[''\|"]', '', 'g')
   else
-    let self.prompt = g:terminus_default_prompt
+    let self.prompt = get(g:, 'terminus_default_prompt', '>')
   endif
 endfunction
 
@@ -107,22 +107,10 @@ function! Terminus.Erase()
   endif
 endfunction
 
-function! s:handle_stdout(job_id, data, event)
-  for key in keys(g:terminus_terminals)
-    if g:terminus_terminals[key].job_id ==# a:job_id
-      call g:terminus_terminals[key].HandleStdout(a:data, a:event)
-    endif
-  endfor
-endfunction
-
-function! s:strip_color_codes(input)
-  return substitute(a:input, '\e\[[0-9;]*[mK]', '', "g")
-endfunction
-
 " WARNING: this is handled asynchronously! 
 " Currently only extracts and stores the prompt
 function! Terminus.HandleStdout(data, event)
-  if g:terminus_update_terminal_name
+  if get(g:, 'terminus_use_xterm_title', 0)
     if bufnr('%') ==# self.bufnr
       let self.stdout_buf = self.stdout_buf . join(a:data, '')
       let l:idx = match(self.stdout_buf, '[]')
@@ -133,9 +121,9 @@ function! Terminus.HandleStdout(data, event)
         let self.stdout_buf = strpart(self.stdout_buf, l:idx + 1)
 
         let l:line = s:strip_color_codes(l:line)
-        let l:line = substitute(l:line, '(B', '', 'g')  " mystery code
+        let l:line = substitute(l:line, '(B', '', 'g')  " remove mystery control code
         let l:line = substitute(l:line, '\[[0-9;]\+D', '', 'g')
-        if get(g:, 'terminus_enable_logging', 1)
+        if get(g:, 'terminus_enable_logging', 0)
           let l:output = substitute(l:line, '', '^[', 'g')
           let l:output = substitute(l:output, '', '^M', 'g')
           call writefile([l:output], '/tmp/terminus.log', 'a')
@@ -153,7 +141,7 @@ function! Terminus.HandleStdout(data, event)
 endfunction
 
 function! Terminus.Rename()
-  execute 'file ' . self.fname
+  execute 'silent! file ' . self.fname
   redraw!
 endfunction
 
@@ -182,6 +170,18 @@ function! Terminus.New(...)
         \ | autocmd! BufDelete <buffer>'
 
   return obj
+endfunction
+
+function! s:handle_stdout(job_id, data, event)
+  for key in keys(g:terminus_terminals)
+    if g:terminus_terminals[key].job_id ==# a:job_id
+      call g:terminus_terminals[key].HandleStdout(a:data, a:event)
+    endif
+  endfor
+endfunction
+
+function! s:strip_color_codes(input)
+  return substitute(a:input, '\e\[[0-9;]*[mK]', '', "g")
 endfunction
 
 function! s:get_commandline(prompt)
@@ -231,8 +231,12 @@ endfunction
 
 " Mappings
 tnoremap <silent> <Plug>TerminusEdit <c-\><c-n>:call <SID>current_terminal().EditCommand()<cr>
-tmap <c-x> <Plug>TerminusEdit
+
+if get(g:, 'terminus_default_mappings', 0)
+  tmap <c-x> <Plug>TerminusEdit
+endif
 
 " Commands
 command! -nargs=? TerminusOpen call Terminus.New(<f-args>)
+command! -nargs=0 TerminusEditCommand call <SID>current_terminal().EditCommand()
 command! -nargs=? TerminusSetPrompt call <SID>current_terminal().SetPrompt(<f-args>)

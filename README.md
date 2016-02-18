@@ -19,11 +19,11 @@ neoterm allows you to run a command from a text buffer inside a terminal.
 
 ### Edit command
 
-While in `TERMINAL` mode `<c-e><c-x>` can be used to open the current command inside a scratch buffer. The contents of the scratch buffer are then sent back to the terminal (via stdin) once the scratch buffer is closed.
+While in `TERMINAL` mode `<c-x>` can be used to open the current command inside a scratch buffer. The contents of the scratch buffer are then sent back to the terminal (via stdin) once the scratch buffer is closed.
 
-### Update terminal name
+### Use Xterm title
 
-By parsing the stdout of the terminal we can keep track of the current prompt and update the name of the terminal buffer to match. This makes it easier to identify which terminal is which when viewing the buffer list (`:ls`).
+Use the xterm title as the terminal buffer name. This makes it much easier to differentiate between different terminal buffers. The title will depend on what your shell emits, fish will show the current command and directory.
 
 ## Installations
 
@@ -34,4 +34,36 @@ By parsing the stdout of the terminal we can keep track of the current prompt an
     ...
     call plug#end()
 
+## Commands
+
+Open a new terminal
+
+   TerminusOpen
+
+   TerminausOpen /bin/sh
+
+Edit the current terminal command
+
+   TerminusEditCommand
+
+Set the terminal prompt
+
+   TerminusSetPrompt >
+
 ## Configuration
+
+Enable the default mappings
+
+   g:terminus_default_mappings = 1
+   
+Set the default prompt 
+
+   g:terminus_default_prompt = '>'
+
+Enable xterm titles
+
+   g:terminus_use_xterm_title = 1
+
+
+
+
