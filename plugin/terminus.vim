@@ -130,7 +130,7 @@ function! Terminus.HandleStdout(data, event)
         endif
         let l:title = matchstr(l:line, s:xterm_title_hack)
         if !empty(l:title)
-          let self.fname = fnameescape(self.job_id . ' ' . l:title)
+          let self.fname = fnameescape(self.bufnr . ' ' . l:title)
           call self.Rename()
         endif
         " there may be more than one line included in each event!

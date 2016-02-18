@@ -23,7 +23,21 @@ While in `TERMINAL` mode `<c-x>` can be used to open the current command inside 
 
 ### Use Xterm title
 
-Use the xterm title as the terminal buffer name. This makes it much easier to differentiate between different terminal buffers. The title will depend on what your shell emits, fish will show the current command and directory.
+Use the xterm title as the terminal buffer name. This makes it much easier to differentiate between different terminal buffers. The title will depend on what your shell emits, fish shell will show the current command and directory.
+
+`:ls` with Xterm titles enabled 
+
+    :ls
+      1   h- "1 fish  /tmp"                    line 45
+      5  %a- "5 brettanomyces@brettanomyces: ~/Workspace"                    line 45
+      12  h- "12 sl  /home/brettanomyces"                           line 45
+
+`:ls` without Xterm titles enabled
+
+    :ls
+      3   h- "termp:/.//7596:/usr/local/bin/fish" line 45
+      4  #h- "termp:/.//7627:/usr/local/bin/fish" line 45
+      5  %a- "termp:/.//7686:/usr/local/bin/fish" line 45
 
 ## Installations
 
