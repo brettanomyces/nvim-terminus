@@ -18,6 +18,22 @@ endif
 " if a user has not entered a command then there will not be a space after the last prompt
 let s:space_or_eol = '\( \|$\|\n\)'
 
+" xterm title hack
+" ESC =  = \033 = \e
+" BEL =  = \007
+let s:xterm_title_hack = ']0;\zs.\{-}\ze'
+
+" [#D = Cursor Backward - Moves the cursor backward by # columns
+" [m  = 
+" (B  = mystery, possible cursor down
+" [K  = erase to eol
+" [1K = erase to start of line
+" [2K = erase entire line
+" >   = Numeric Keypad Mode
+" ?#h = set mode? ?1h = Application Cursor Keys (DECCKM)
+" ?#l = reset mode? ?1l = Normal Cursor Mode (DECCOM)
+" =⏎  = seems to be before the actual prompt, Application Keypad Mode
+
 " start the prototype
 let Terminus = {}
 
@@ -60,7 +76,6 @@ function! Terminus.SetPrompt(...)
   endif
 endfunction
 
-
 function! Terminus.GetCommand()
   let l:commandline = s:get_commandline(self.GetPrompt())
   return s:format_command(s:strip_prompt(l:commandline, self.GetPrompt()))
@@ -100,29 +115,39 @@ function! s:handle_stdout(job_id, data, event)
   endfor
 endfunction
 
+function! s:strip_color_codes(input)
+  return substitute(a:input, '\e\[[0-9;]*[mK]', '', "g")
+endfunction
+
 " WARNING: this is handled asynchronously! 
 " Currently only extracts and stores the prompt
 function! Terminus.HandleStdout(data, event)
   if g:terminus_update_terminal_name
     if bufnr('%') ==# self.bufnr
-      if strlen(self.stdout_buf) > 1000
-        let self.stdout_buf = ''
-      endif
-      let self.stdout_buf = self.stdout_buf . join(a:data, "\n")
-      " get prompt string
-      let prompt_string = matchstr(self.stdout_buf, '\e\]0;\zs.\{-}\ze')
-      if !empty(l:prompt_string)
-        " remove color control characters and escape string so it can be used as a filename
-        let self.fname = fnameescape(self.job_id . ' ' . substitute(l:prompt_string, '\e\[[0-9;]\+[mK]', '', 'g'))
+      let self.stdout_buf = self.stdout_buf . join(a:data, '')
+      let l:idx = match(self.stdout_buf, '[]')
+      while l:idx !=# -1
+        " include the  or  in the line
+        let l:line = strpart(self.stdout_buf, 0, l:idx + 1)
+        " trim buffer
+        let self.stdout_buf = strpart(self.stdout_buf, l:idx + 1)
 
-        " TODO won't always be the case!
-        " let self.cmd split(l:prompt_string)[0]
-        " let self.dir split(l:prompt_string)[1]
-
-        call self.Rename()
-        " TODO we may be throwing away a prompt if two appear in the same batch of a:data
-        let self.stdout_buf = ''
-      endif
+        let l:line = s:strip_color_codes(l:line)
+        let l:line = substitute(l:line, '(B', '', 'g')  " mystery code
+        let l:line = substitute(l:line, '\[[0-9;]\+D', '', 'g')
+        if get(g:, 'terminus_enable_logging', 1)
+          let l:output = substitute(l:line, '', '^[', 'g')
+          let l:output = substitute(l:output, '', '^M', 'g')
+          call writefile([l:output], '/tmp/terminus.log', 'a')
+        endif
+        let l:title = matchstr(l:line, s:xterm_title_hack)
+        if !empty(l:title)
+          let self.fname = fnameescape(self.job_id . ' ' . l:title)
+          call self.Rename()
+        endif
+        " there may be more than one line included in each event!
+        let l:idx = match(self.stdout_buf, '[]')
+      endwhile
     endif
   endif
 endfunction
