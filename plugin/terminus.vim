@@ -113,18 +113,19 @@ function! Terminus.HandleStdout(data, event)
   if get(g:, 'terminus_use_xterm_title', 0)
     if bufnr('%') ==# self.bufnr
       let self.stdout_buf = self.stdout_buf . join(a:data, '')
+      " processing line by line prevents buffer getting too big
       let l:idx = match(self.stdout_buf, '[]')
       while l:idx !=# -1
         " include the  or  in the line
         let l:line = strpart(self.stdout_buf, 0, l:idx + 1)
         " trim buffer
         let self.stdout_buf = strpart(self.stdout_buf, l:idx + 1)
-
-        let l:line = s:strip_color_codes(l:line)
-        let l:line = substitute(l:line, '(B', '', 'g')  " remove mystery control code
-        let l:line = substitute(l:line, '\[[0-9;]\+D', '', 'g')
         if get(g:, 'terminus_enable_logging', 0)
-          let l:output = substitute(l:line, '', '^[', 'g')
+          " format output to make it easier to read
+          let l:output = s:strip_color_codes(l:line)
+          let l:output = substitute(l:output, '(B', '', 'g')  " remove mystery control code
+          let l:output = substitute(l:output, '\[[0-9;]\+D', '', 'g')
+          let l:output = substitute(l:output, '', '^[', 'g')
           let l:output = substitute(l:output, '', '^M', 'g')
           call writefile([l:output], '/tmp/terminus.log', 'a')
         endif

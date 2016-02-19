@@ -39,7 +39,7 @@ Use the xterm title as the terminal buffer name. This makes it much easier to di
       4  #h- "termp:/.//7627:/usr/local/bin/fish" line 45
       5  %a- "termp:/.//7686:/usr/local/bin/fish" line 45
 
-## Installations
+## Installation
 
 ### [vim-plug](https://github/junegunn/vim-plug)
 
@@ -78,6 +78,14 @@ Enable xterm titles
 
     g:terminus_use_xterm_title = 1
 
+## TODO
 
+* Autodetect prompt - useful if a user enters a interpreter inside a shell running in a terminal buffer
+* Extract command results - could be useful for something ???
+* Intergration with neoterm
+
+## Contributing
+
+Please do. Issuer/PR's/Ideas are all welcome!
 
 
