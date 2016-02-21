@@ -42,7 +42,7 @@ Use the xterm title as the terminal buffer name. This makes it much easier to di
 If you are using [fish-shell](https://fishshell.com/) then you can control what is displayed in the title by defining `~/.config/fish/functions/fish_title.fish`
 
     function fish_title
-      echo -n 'brett'
+      echo -n 'a really good title'
     end
 
 To update the title for other shells see: [http://tldp.org/HOWTO/Xterm-Title-4.html](http://tldp.org/HOWTO/Xterm-Title-4.html)
