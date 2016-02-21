@@ -39,6 +39,15 @@ Use the xterm title as the terminal buffer name. This makes it much easier to di
       4  #h- "termp:/.//7627:/usr/local/bin/fish" line 45
       5  %a- "termp:/.//7686:/usr/local/bin/fish" line 45
 
+If you are using [fish-shell](https://fishshell.com/) then you can control what is displayed in the title by defining `~/.config/fish/functions/fish_title.fish`
+
+    function fish_title
+      echo -n 'brett'
+    end
+
+To update the title for other shells see: [http://tldp.org/HOWTO/Xterm-Title-4.html](http://tldp.org/HOWTO/Xterm-Title-4.html)
+
+
 ## Installation
 
 ### [vim-plug](https://github/junegunn/vim-plug)
