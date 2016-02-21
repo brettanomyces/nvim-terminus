@@ -95,6 +95,6 @@ Enable xterm titles
 
 ## Contributing
 
-Please do. Issuer/PR's/Ideas are all welcome!
+Please do. Issues/PR's/Ideas are all welcome!
 
 
