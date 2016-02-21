@@ -127,6 +127,7 @@ function! Terminus.HandleStdout(data, event)
           let l:output = substitute(l:output, '\[[0-9;]\+D', '', 'g')
           let l:output = substitute(l:output, '', '^[', 'g')
           let l:output = substitute(l:output, '', '^M', 'g')
+          let l:output = substitute(l:output, '', '^G', 'g')
           call writefile([l:output], '/tmp/terminus.log', 'a')
         endif
         let l:title = matchstr(l:line, s:xterm_title_hack)
