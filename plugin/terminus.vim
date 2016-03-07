@@ -107,6 +107,16 @@ function! Terminus.Erase()
   endif
 endfunction
 
+if !exists("*TerminusHandleStdout")
+  function! TerminusHandleStdout(job_id, data, event)
+    for key in keys(g:terminus_terminals)
+      if g:terminus_terminals[key].job_id ==# a:job_id
+        call g:terminus_terminals[key].HandleStdout(a:data, a:event)
+      endif
+    endfor
+  endfunction
+endif
+
 " WARNING: this is handled asynchronously! 
 " Currently only extracts and stores the prompt
 function! Terminus.HandleStdout(data, event)
@@ -161,7 +171,7 @@ function! Terminus.New(...)
   let obj.shell = l:cmd
   " open new empty buffer which the terminal will use
   enew
-  let obj.job_id = termopen(l:cmd, {'on_stdout':function('s:handle_stdout')})
+  let obj.job_id = termopen(l:cmd, {'on_stdout':function('TerminusHandleStdout')})
   let obj.bufnr = bufnr('%')
   let obj.fname = ''
 
@@ -172,14 +182,6 @@ function! Terminus.New(...)
         \ | autocmd! BufDelete <buffer>'
 
   return obj
-endfunction
-
-function! s:handle_stdout(job_id, data, event)
-  for key in keys(g:terminus_terminals)
-    if g:terminus_terminals[key].job_id ==# a:job_id
-      call g:terminus_terminals[key].HandleStdout(a:data, a:event)
-    endif
-  endfor
 endfunction
 
 function! s:strip_color_codes(input)
