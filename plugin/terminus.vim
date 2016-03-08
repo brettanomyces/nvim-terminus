@@ -93,9 +93,9 @@ function! Terminus.OpenScratch(command)
   " send command back to terminal when we leave this buffer. Note that we
   " can't use arguments in autocmd as they won't exist when autocmd is run so
   " we must use execute to resolve those arguments beforehand
-  execute 'autocmd BufLeave <buffer> 
+  execute 'autocmd BufUnload <buffer> 
         \ call g:terminus_terminals[' . self.bufnr . '].SetCommand(join(getline(1, ''$''), "\n"))
-        \ | autocmd! BufLeave <buffer>'
+        \ | autocmd! BufUnload <buffer>'
 
   call s:put_command(a:command)
 
