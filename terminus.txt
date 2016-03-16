@@ -1,0 +1,25 @@
+*terminus.txt* 
+
+Author:  Brett
+Repo:    https://github.com/brettanomyces/nvim-terminus
+License: Same terms as Vim itself (see |license|)
+
+SUMMARY					*terminus*
+
+This plugin hooks into the stdout of a terminal buffer allowing it
+to provide some useful functionality such as editing the terinal
+command in a scratch buffer and update the terminal buffer name.
+
+COMMANDS				*terminus-commands*
+
+					*terminus-:TerminusOpen*
+:TerminusOpen {cmd}	Open a terminal buffer, mirrors the behaviour of 
+			:terminal.
+
+:TerminusEditCommand	Edit the current terminal command in a scratch buffer
+
+:TerminusSetPrompt {prompt}	Set the terminal prompt. Default is '>'.
+
+
+
+vim:tw=78:et:ft=help:norl:

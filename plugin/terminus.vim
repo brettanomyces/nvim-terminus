@@ -169,9 +169,12 @@ function! Terminus.New(...)
   let obj.prompt = g:terminus_default_prompt
   let obj.stdout_buf = ''
   let obj.shell = l:cmd
+
   " open new empty buffer which the terminal will use
   enew
   let obj.job_id = termopen(l:cmd, {'on_stdout':function('TerminusHandleStdout')})
+  startinsert
+
   let obj.bufnr = bufnr('%')
   let obj.fname = ''
 
@@ -241,6 +244,8 @@ if get(g:, 'terminus_default_mappings', 0)
 endif
 
 " Commands
+
+" TerminusOpen should mirror the `:terminal`
 command! -nargs=? TerminusOpen call Terminus.New(<f-args>)
 command! -nargs=0 TerminusEditCommand call <SID>current_terminal().EditCommand()
 command! -nargs=? TerminusSetPrompt call <SID>current_terminal().SetPrompt(<f-args>)
