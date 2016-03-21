@@ -66,6 +66,10 @@ function! Terminus.GetPrompt()
   endif
 endfunction
 
+function! Terminus.GetTitle()
+  return self.xterm_title
+endfunction
+
 " Set the prompt for the current 
 function! Terminus.SetPrompt(...)
   if a:0 > 0
@@ -133,7 +137,7 @@ function! Terminus.HandleStdout(data, event)
         if get(g:, 'terminus_enable_logging', 0)
           " format output to make it easier to read
           let l:output = s:strip_color_codes(l:line)
-          let l:output = substitute(l:output, '(B', '', 'g')  " remove mystery control code
+          " let l:output = substitute(l:output, '(B', '', 'g')  " remove mystery control code
           let l:output = substitute(l:output, '\[[0-9;]\+D', '', 'g')
           let l:output = substitute(l:output, '', '^[', 'g')
           let l:output = substitute(l:output, '', '^M', 'g')
@@ -142,7 +146,7 @@ function! Terminus.HandleStdout(data, event)
         endif
         let l:title = matchstr(l:line, s:xterm_title_hack)
         if !empty(l:title)
-          let self.fname = fnameescape(self.bufnr . ' ' . l:title)
+          let self.xterm_title = fnameescape(self.bufnr . ' ' . l:title)
           call self.Rename()
         endif
         " there may be more than one line included in each event!
@@ -153,7 +157,7 @@ function! Terminus.HandleStdout(data, event)
 endfunction
 
 function! Terminus.Rename()
-  execute 'silent! file ' . self.fname
+  execute 'silent! file ' . self.GetTitle()
   redraw!
 endfunction
 
@@ -176,9 +180,11 @@ function! Terminus.New(...)
   startinsert
 
   let obj.bufnr = bufnr('%')
-  let obj.fname = ''
+  let obj.xterm_title = ''
 
   let g:terminus_terminals[obj.bufnr] = obj
+
+  call s:define_commands()
 
   execute 'autocmd BufDelete <buffer> 
         \ call g:terminus_terminals[' . obj.bufnr . '].Erase() 
@@ -247,5 +253,10 @@ endif
 
 " TerminusOpen should mirror the `:terminal`
 command! -nargs=? TerminusOpen call Terminus.New(<f-args>)
-command! -nargs=0 TerminusEditCommand call <SID>current_terminal().EditCommand()
-command! -nargs=? TerminusSetPrompt call <SID>current_terminal().SetPrompt(<f-args>)
+
+function! s:define_commands() abort
+  command! -buffer -nargs=0 TerminusEditCommand call <SID>current_terminal().EditCommand()
+  command! -buffer -nargs=? TerminusSetPrompt call <SID>current_terminal().SetPrompt(<f-args>)
+  command! -buffer -nargs=0 TerminusGetTitle echo <SID>current_terminal().GetTitle()
+endfunction
+
