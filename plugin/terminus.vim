@@ -101,7 +101,7 @@ function! Terminus.OpenScratch(command)
         \ call g:terminus_terminals[' . self.bufnr . '].SetCommand(join(getline(1, ''$''), "\n"))
         \ | autocmd! BufUnload <buffer>'
 
-  call s:put_command(a:command)
+  call setline(1, a:command)
 
 endfunction
 
@@ -229,13 +229,6 @@ function! s:format_command(command)
   " remove newlines that do not come after a backslash
   let l:command = substitute(l:command, '\([^\\]\)\n*', '\1', "g")
   return l:command
-endfunction
-
-" put the given command into the current buffer
-function! s:put_command(command)
-  put =a:command
-  " remove the (empty) first line
-  0,1delete
 endfunction
 
 function! s:current_terminal()
