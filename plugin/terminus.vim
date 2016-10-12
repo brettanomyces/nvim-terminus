@@ -50,8 +50,8 @@ endfunction
 
 function! Terminus.InterceptCommand()
   let l:command = self.GetCommand()
-  call self.ClearCommand()
   if strlen(l:command) > 1 && l:command[0] ==# ":"
+    call self.ClearCommand()
     redir! => l:output
     execute l:command[1:]
     redir END
@@ -59,6 +59,7 @@ function! Terminus.InterceptCommand()
   else
     " run current command
     call jobsend(self.job_id, "")
+    startinsert
   endif
 endfunction
 
