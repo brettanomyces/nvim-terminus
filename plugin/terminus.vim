@@ -50,15 +50,12 @@ endfunction
 
 function! Terminus.InterceptCommand()
   let l:command = self.GetCommand()
+  call self.ClearCommand()
   if strlen(l:command) > 1 && l:command[0] ==# ":"
-    call self.ClearCommand()
-    " TODO output to scratch buffer?
     redir! => l:output
     execute l:command[1:]
     redir END
-    " we want to pass each line as an item in a list for the setline() function
-
-    call self.OpenScratch([l:command] + split(strtrans(l:output), '\^@'))
+    " call self.OpenScratch([l:command] + split(strtrans(l:output), '\^@'))
   else
     " run current command
     call jobsend(self.job_id, "")
@@ -256,7 +253,7 @@ endfunction
 
 " Mappings
 tnoremap <silent> <Plug>TerminusEditCommand <c-\><c-n>:call <SID>current_terminal().EditCommand()<cr>
-tnoremap <silent> <Plug>TerminusInterceptCommand <c-\><c-n>:call <SID>current_terminal().InterceptCommand()<cr>A
+tnoremap <silent> <Plug>TerminusInterceptCommand <c-\><c-n>:call <SID>current_terminal().InterceptCommand()<cr>
 
 if get(g:, 'terminus_default_mappings', 0)
   tmap <c-x> <Plug>TerminusEditCommand
