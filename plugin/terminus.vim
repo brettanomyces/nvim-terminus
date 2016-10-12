@@ -48,10 +48,33 @@ function! Terminus.ClearCommand()
   endwhile
 endfunction
 
+function! Terminus.InterceptCommand()
+  let l:command = self.GetCommand()
+  if strlen(l:command) > 1 && l:command[0] ==# ":"
+    call self.ClearCommand()
+    redir! => l:output
+    execute l:command[1:]
+    redir END
+    " call self.OpenScratch([l:command] + split(strtrans(l:output), '\^@'))
+  else
+    " run current command
+    call jobsend(self.job_id, "")
+    startinsert
+  endif
+endfunction
+
 function! Terminus.EditCommand()
   let l:command = self.GetCommand()
-  call self.OpenScratch(l:command)
   call self.ClearCommand()
+  call self.OpenScratch(l:command)
+
+  " send command back to terminal when we leave this buffer. Note that we
+  " can't use arguments in autocmd as they won't exist when autocmd is run so
+  " we must use execute to resolve those arguments beforehand
+  execute 'autocmd BufUnload <buffer> 
+        \ call g:terminus_terminals[' . self.bufnr . '].SetCommand(join(getline(0, ''$''), "\n"))
+        \ | autocmd! BufUnload <buffer>'
+
 endfunction
 
 function! Terminus.SetCommand(command)
@@ -94,12 +117,6 @@ function! Terminus.OpenScratch(command)
   setlocal bufhidden=unload
   setlocal noswapfile
 
-  " send command back to terminal when we leave this buffer. Note that we
-  " can't use arguments in autocmd as they won't exist when autocmd is run so
-  " we must use execute to resolve those arguments beforehand
-  execute 'autocmd BufUnload <buffer> 
-        \ call g:terminus_terminals[' . self.bufnr . '].SetCommand(join(getline(1, ''$''), "\n"))
-        \ | autocmd! BufUnload <buffer>'
 
   call setline(1, a:command)
 
@@ -237,9 +254,11 @@ endfunction
 
 " Mappings
 tnoremap <silent> <Plug>TerminusEditCommand <c-\><c-n>:call <SID>current_terminal().EditCommand()<cr>
+tnoremap <silent> <Plug>TerminusInterceptCommand <c-\><c-n>:call <SID>current_terminal().InterceptCommand()<cr>
 
 if get(g:, 'terminus_default_mappings', 0)
   tmap <c-x> <Plug>TerminusEditCommand
+  tmap <cr> <Plug>TerminusInterceptCommand
 endif
 
 " Commands
