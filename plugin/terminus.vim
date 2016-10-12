@@ -67,8 +67,16 @@ endfunction
 
 function! Terminus.EditCommand()
   let l:command = self.GetCommand()
-  call self.OpenScratch(l:command)
   call self.ClearCommand()
+  call self.OpenScratch(l:command)
+
+  " send command back to terminal when we leave this buffer. Note that we
+  " can't use arguments in autocmd as they won't exist when autocmd is run so
+  " we must use execute to resolve those arguments beforehand
+  execute 'autocmd BufUnload <buffer> 
+        \ call g:terminus_terminals[' . self.bufnr . '].SetCommand(join(getline(0, ''$''), "\n"))
+        \ | autocmd! BufUnload <buffer>'
+
 endfunction
 
 function! Terminus.SetCommand(command)
@@ -111,12 +119,6 @@ function! Terminus.OpenScratch(command)
   setlocal bufhidden=unload
   setlocal noswapfile
 
-  " send command back to terminal when we leave this buffer. Note that we
-  " can't use arguments in autocmd as they won't exist when autocmd is run so
-  " we must use execute to resolve those arguments beforehand
-  execute 'autocmd BufUnload <buffer> 
-        \ call g:terminus_terminals[' . self.bufnr . '].SetCommand(join(getline(1, ''$''), "\n"))
-        \ | autocmd! BufUnload <buffer>'
 
   call setline(1, a:command)
 
