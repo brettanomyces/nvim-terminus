@@ -17,7 +17,13 @@ neoterm allows you to run a command from a text buffer inside a terminal.
 
 ## Features
 
-### Edit command
+### Run Neovim commands from the terminal
+
+While in `TERMINAL` mode any command beginning with `:` will be intercepted and executed as a command in Neovim. For example; opening files in the current Neovim instance (`:e ~/.config/nvim/init.vim`).
+
+nvim-terminus will set Neovim's working directory to the shell's current working directory before the command is executed.
+
+### Edit terminal commands in Neovim
 
 While in `TERMINAL` mode `<c-x>` can be used to open the current command inside a scratch buffer. The contents of the scratch buffer are then sent back to the terminal (via stdin) once the scratch buffer is closed.
 
@@ -63,7 +69,7 @@ Open a new terminal
 
     TerminusOpen
 
-    TerminausOpen /bin/sh
+    TerminusOpen /bin/sh
 
 Edit the current terminal command
 

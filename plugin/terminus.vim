@@ -52,15 +52,19 @@ function! Terminus.InterceptCommand()
   let l:command = self.GetCommand()
   if strlen(l:command) > 1 && l:command[0] ==# ":"
     call self.ClearCommand()
-    redir! => l:output
+    call self.UpdateWorkingDirectory()
     execute l:command[1:]
-    redir END
-    " call self.OpenScratch([l:command] + split(strtrans(l:output), '\^@'))
   else
     " run current command
     call jobsend(self.job_id, "")
     startinsert
   endif
+endfunction
+
+function! Terminus.UpdateWorkingDirectory()
+    let l:child_pid = substitute(strtrans(system("pgrep -P " . b:terminal_job_pid)), '\^@', '', 'g')
+    let l:cwd = substitute(strtrans(system("readlink -e /proc/" . l:child_pid . "/cwd")), '\^@', '', 'g')
+    execute "cd " . l:cwd
 endfunction
 
 function! Terminus.EditCommand()
