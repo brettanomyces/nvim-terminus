@@ -33,23 +33,29 @@ Use the xterm title as the terminal buffer name. This makes it much easier to di
 
 `:ls` with Xterm titles enabled 
 
-    :ls
-      1   h- "1 fish  /tmp"                    line 45
-      5  %a- "5 brettanomyces@brettanomyces: ~/Workspace"                    line 45
-      12  h- "12 sl  /home/brettanomyces"                           line 45
+```vim
+:ls
+  1   h- "1 fish  /tmp"                    line 45
+  5  %a- "5 brettanomyces@brettanomyces: ~/Workspace"                    line 45
+  12  h- "12 sl  /home/brettanomyces"                           line 45
+```
 
 `:ls` without Xterm titles enabled
 
-    :ls
-      3   h- "termp:/.//7596:/usr/local/bin/fish" line 45
-      4  #h- "termp:/.//7627:/usr/local/bin/fish" line 45
-      5  %a- "termp:/.//7686:/usr/local/bin/fish" line 45
+```vim
+:ls
+  3   h- "termp:/.//7596:/usr/local/bin/fish" line 45
+  4  #h- "termp:/.//7627:/usr/local/bin/fish" line 45
+  5  %a- "termp:/.//7686:/usr/local/bin/fish" line 45
+```
 
 If you are using [fish-shell](https://fishshell.com/) then you can control what is displayed in the title by defining `~/.config/fish/functions/fish_title.fish`
 
-    function fish_title
-      echo -n 'a really good title'
-    end
+```fish
+function fish_title
+  echo -n 'a really good title'
+end
+```
 
 To update the title for other shells see: [http://tldp.org/HOWTO/Xterm-Title-4.html](http://tldp.org/HOWTO/Xterm-Title-4.html)
 
@@ -57,41 +63,53 @@ To update the title for other shells see: [http://tldp.org/HOWTO/Xterm-Title-4.h
 ## Installation
 
 ### [vim-plug](https://github/junegunn/vim-plug)
-
-    call plug#begin('~/.nvim/plugged')
-    Plug 'brettanomyces/nvim-terminus'
-    ...
-    call plug#end()
+```vim
+call plug#begin('~/.nvim/plugged')
+Plug 'brettanomyces/nvim-terminus'
+...
+call plug#end()
+```
 
 ## Commands
 
 Open a new terminal
 
-    TerminusOpen
+```vim
+TerminusOpen
 
-    TerminusOpen /bin/sh
+TerminusOpen /bin/sh
+```
 
 Edit the current terminal command
 
-    TerminusEditCommand
+```vim
+TerminusEditCommand
+```
 
 Set the terminal prompt
 
-    TerminusSetPrompt >
+```vim
+TerminusSetPrompt >
+```
 
 ## Configuration
 
 Enable the default mappings
 
-    g:terminus_default_mappings = 1
-   
-Set the default prompt 
+```vim
+g:terminus_default_mappings = 1
+```
 
-    g:terminus_default_prompt = '>'
+Set the default prompt 
+```vim
+g:terminus_default_prompt = '>'
+```
 
 Enable xterm titles
 
-    g:terminus_use_xterm_title = 1
+```vim
+g:terminus_use_xterm_title = 1
+```
 
 ## TODO
 
