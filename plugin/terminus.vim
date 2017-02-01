@@ -63,7 +63,7 @@ endfunction
 
 function! Terminus.UpdateWorkingDirectory()
     let l:child_pid = substitute(strtrans(system("pgrep -P " . b:terminal_job_pid)), '\^@', '', 'g')
-    let l:cwd = substitute(strtrans(system("readlink -e /proc/" . l:child_pid . "/cwd")), '\^@', '', 'g')
+    let l:cwd = fnameescape(substitute(strtrans(system("readlink -e /proc/" . l:child_pid . "/cwd")), '\^@', '', 'g'))
     execute "cd " . l:cwd
 endfunction
 
