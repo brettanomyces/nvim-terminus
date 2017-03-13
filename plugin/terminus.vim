@@ -54,6 +54,9 @@ function! Terminus.InterceptCommand()
     call self.ClearCommand()
     call self.UpdateWorkingDirectory()
     execute l:command[1:]
+  elseif match(l:command, "exit.*") !=# -1
+    call jobstop(self.job_id)
+    bdelete!
   else
     " run current command
     call jobsend(self.job_id, "")
