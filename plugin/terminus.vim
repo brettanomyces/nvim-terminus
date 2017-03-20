@@ -66,7 +66,11 @@ endfunction
 
 function! Terminus.UpdateWorkingDirectory()
     let l:child_pid = substitute(strtrans(system("pgrep -P " . b:terminal_job_pid)), '\^@', '', 'g')
-    let l:cwd = fnameescape(substitute(strtrans(system("readlink -e /proc/" . l:child_pid . "/cwd")), '\^@', '', 'g'))
+    if (substitute(system("uname"), '\n', '', '') ==# "Darwin")
+      let l:cwd = fnameescape(substitute(strtrans(system("lsof -a -d cwd -p " . l:child_pid . " | awk 'NR > 1 {print $9}'")), '\^@', '', 'g'))
+    else
+      let l:cwd = fnameescape(substitute(strtrans(system("readlink -e /proc/" . l:child_pid . "/cwd")), '\^@', '', 'g'))
+    endif
     execute "cd " . l:cwd
 endfunction
 
