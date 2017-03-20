@@ -37,15 +37,8 @@ let s:xterm_title_hack = ']0;\zs.\{-}\ze'
 " start the prototype
 let Terminus = {}
 
-" instance methods, shared by all copies of the prototype
 function! Terminus.ClearCommand()
-  let i = 0
-  while i < g:terminus_max_command_length
-    " use backspace to clear the commandline rather than 
-    " send 10 backspace's at once to reduce lag
-    call jobsend(self.job_id, '')
-    let i += 10
-  endwhile
+  call jobsend(self.job_id, '')
 endfunction
 
 function! Terminus.InterceptCommand()
