@@ -43,26 +43,55 @@ endfunction
 
 function! Terminus.InterceptCommand()
   let l:command = self.GetCommand()
-  if strlen(l:command) > 1 && l:command[0] ==# ":"
-    call self.ClearCommand()
-    call self.UpdateWorkingDirectory()
-    execute l:command[1:]
-  elseif match(l:command, "exit.*") !=# -1
-    call jobstop(self.job_id)
-    bdelete!
-  else
-    " run current command
-    call jobsend(self.job_id, "")
-    startinsert
+  " only handle command for the terminus process, i.e. not it's child processes
+  if self.Pid() == self.CurrentPid()
+    if strlen(l:command) > 1 && l:command[0] ==# ":"
+      call self.ClearCommand()
+      call self.UpdateWorkingDirectory()
+      execute l:command[1:]
+      return
+    elseif match(l:command, "exit.*") !=# -1
+      " TODO handle 
+      call jobstop(self.job_id)
+      bdelete!
+      return
+    endif
   endif
+
+  " run current command
+  call jobsend(self.job_id, "")
+  startinsert
+endfunction
+
+" TODO: handle multiple child processes
+function! Terminus.CurrentPid()
+  let l:pid = self.Pid()
+  while 1
+    let l:child_pid = substitute(strtrans(system("pgrep -P " . l:pid)), '\^@', '', 'g')
+    if empty(l:child_pid)
+      return l:pid
+    else
+      let l:pid = l:child_pid
+    endif
+  endwhile
+  return l:pid
+endfunction
+
+function! Terminus.Pid()
+  " termopen() will spawn our terimal using the current value of shell i.e. &shell -c /usr/local/bin/fish
+  " this means the pid we want is actually the child of b:terminal_job_pid
+  " see: 
+  "  * :help terminal 
+  "  * https://github.com/neovim/neovim/issues/5478
+  let l:pid = substitute(strtrans(system("pgrep -P " . b:terminal_job_pid)), '\^@', '', 'g')
+  return l:pid
 endfunction
 
 function! Terminus.UpdateWorkingDirectory()
-    let l:child_pid = substitute(strtrans(system("pgrep -P " . b:terminal_job_pid)), '\^@', '', 'g')
     if (substitute(system("uname"), '\n', '', '') ==# "Darwin")
-      let l:cwd = fnameescape(substitute(strtrans(system("lsof -a -d cwd -p " . l:child_pid . " | awk 'NR > 1 {print $9}'")), '\^@', '', 'g'))
+      let l:cwd = fnameescape(substitute(strtrans(system("lsof -a -d cwd -p " . self.Pid() . " | awk 'NR > 1 {print $9}'")), '\^@', '', 'g'))
     else
-      let l:cwd = fnameescape(substitute(strtrans(system("readlink -e /proc/" . l:child_pid . "/cwd")), '\^@', '', 'g'))
+      let l:cwd = fnameescape(substitute(strtrans(system("readlink -e /proc/" . self.Pid() . "/cwd")), '\^@', '', 'g'))
     endif
     execute "cd " . l:cwd
 endfunction
