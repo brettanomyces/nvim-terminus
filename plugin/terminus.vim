@@ -149,10 +149,10 @@ function! Terminus.OpenScratch(command)
   setlocal buftype=nofile
   setlocal bufhidden=unload
   setlocal noswapfile
-
+  nnoremap <buffer> <c-x> :bdelete<cr>
+  inoremap <buffer> <c-x> <esc>:bdelete<cr>
 
   call setline(1, a:command)
-
 endfunction
 
 function! Terminus.Erase()
