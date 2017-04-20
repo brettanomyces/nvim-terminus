@@ -89,7 +89,7 @@ endfunction
 
 function! Terminus.UpdateWorkingDirectory()
     if (substitute(system("uname"), '\n', '', '') ==# "Darwin")
-      let l:cwd = fnameescape(substitute(strtrans(system("lsof -a -d cwd -p " . self.Pid() . " | awk 'NR > 1 {print $9}'")), '\^@', '', 'g'))
+      let l:cwd = fnameescape(substitute(strtrans(system("lsof -a -d cwd -p " . self.Pid() . " 2>/dev/null | awk 'NR > 1 {print $9}'")), '\^@', '', 'g'))
     else
       let l:cwd = fnameescape(substitute(strtrans(system("readlink -e /proc/" . self.Pid() . "/cwd")), '\^@', '', 'g'))
     endif
