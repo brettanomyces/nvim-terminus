@@ -281,9 +281,9 @@ endfunction
 " from the terminal buffer
 function! s:format_command(command)
   " remove all whitespace following a newline
-  let l:command = substitute(a:command, '\(\n\)\s*', '\n', "g")
+  let l:command = substitute(a:command, '\(\n\)\s*', '\n', '')
   " remove newlines that do not come after a backslash
-  let l:command = substitute(l:command, '\([^\\]\)\n*', '\1', "g")
+  let l:command = substitute(l:command, '\([^\\]\)\n*', '\1', 'g')
   return l:command
 endfunction
 
