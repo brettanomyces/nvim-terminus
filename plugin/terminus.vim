@@ -48,7 +48,13 @@ function! Terminus.InterceptCommand()
     if strlen(l:command) > 1 && l:command[0] ==# ":"
       call self.ClearCommand()
       call self.UpdateWorkingDirectory()
-      execute l:command[1:]
+      if match(l:command, "nohl.*") !=# -1
+        " highlighting is saved and restored when invoking a user function so
+        " we must clear the search pattern rather than using nohlsearch
+        let @/=''
+      else
+        execute l:command[1:]
+      endif
       return
     elseif match(l:command, "exit.*") !=# -1
       " TODO handle 
