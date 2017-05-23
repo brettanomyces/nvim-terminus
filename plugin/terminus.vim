@@ -38,7 +38,7 @@ let s:xterm_title_hack = ']0;\zs.\{-}\ze'
 let Terminus = {}
 
 function! Terminus.ClearCommand()
-  call jobsend(self.job_id, '')
+  call jobsend(self.job_id, '')
 endfunction
 
 function! Terminus.InterceptCommand()
