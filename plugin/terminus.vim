@@ -158,7 +158,12 @@ function! Terminus.OpenScratch(command)
   nnoremap <buffer> <c-x> :bdelete<cr>A
   inoremap <buffer> <c-x> <esc>:bdelete<cr>A
 
-  call setline(1, a:command)
+  " http://vim.wikia.com/wiki/Newlines_and_nulls_in_Vim_script
+  " When \n is store in a vim variable/register/etc, it is stored as a NULL,
+  " then translated back to a real newline by certain operations. setline() is
+  " not one of those operations so we split the sting into a list.
+  call setline(1, split(a:command, '\%x00'))
+
 endfunction
 
 function! Terminus.Erase()
