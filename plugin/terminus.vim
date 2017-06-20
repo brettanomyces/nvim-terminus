@@ -153,6 +153,7 @@ function! Terminus.OpenScratch(command)
 
   " make buffer a scratch buffer
   setlocal buftype=nofile
+  setlocal filetype=terminus
   setlocal bufhidden=unload
   setlocal noswapfile
   nnoremap <buffer> <c-x> :bdelete<cr>A
